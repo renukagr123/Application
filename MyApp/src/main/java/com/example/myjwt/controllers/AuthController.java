@@ -32,7 +32,7 @@ import com.example.myjwt.repo.UserRepository;
 import com.example.myjwt.security.jwt.JwtUtils;
 import com.example.myjwt.security.services.UserDetailsImpl;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
