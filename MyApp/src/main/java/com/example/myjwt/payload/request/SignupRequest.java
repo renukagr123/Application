@@ -19,6 +19,14 @@ public class SignupRequest {
     @NotBlank
     @Size(min = 6, max = 40)
     private String password;
+    
+	/*
+	 * @NotBlank
+	 * 
+	 * @Size(max = 64) private String verificationCode;
+	 * 
+	 * private boolean enabled;
+	 */
   
     public String getUsername() {
         return username;
@@ -51,4 +59,16 @@ public class SignupRequest {
     public void setRole(Set<String> role) {
       this.role = role;
     }
+
+	/*
+	 * public String getVerificationCode() { return verificationCode; }
+	 * 
+	 * public void setVerificationCode(String verificationCode) {
+	 * this.verificationCode = verificationCode; }
+	 * 
+	 * public boolean isEnabled() { return enabled; }
+	 * 
+	 * public void setEnabled(boolean enabled) { this.enabled = enabled; }
+	 */
+    
 }

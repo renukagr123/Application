@@ -1,14 +1,20 @@
 package com.example.myjwt.controllers;
 
+import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -19,7 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.mail.javamail.JavaMailSender;
 import com.example.myjwt.models.ERole;
 import com.example.myjwt.models.Role;
 import com.example.myjwt.models.User;
@@ -31,6 +37,8 @@ import com.example.myjwt.repo.RoleRepository;
 import com.example.myjwt.repo.UserRepository;
 import com.example.myjwt.security.jwt.JwtUtils;
 import com.example.myjwt.security.services.UserDetailsImpl;
+
+import net.bytebuddy.utility.RandomString;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
@@ -47,10 +55,13 @@ public class AuthController {
 
 	@Autowired
 	PasswordEncoder encoder;
+	
+	@Autowired
+    private JavaMailSender mailSender;
 
 	@Autowired
 	JwtUtils jwtUtils;
-
+	
 	@PostMapping("/signin")
 	public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
 
@@ -64,16 +75,29 @@ public class AuthController {
 		List<String> roles = userDetails.getAuthorities().stream()
 				.map(item -> item.getAuthority())
 				.collect(Collectors.toList());
-
-		return ResponseEntity.ok(new JwtResponse(jwt, 
+		
+		User user=userRepository.findByName(loginRequest.getUsername());
+		
+		boolean isabled=user.isEnabled();
+		
+		System.out.println(isabled);
+		
+		if(isabled) {
+			return ResponseEntity.ok(new JwtResponse(jwt, 
 												 userDetails.getId(), 
 												 userDetails.getUsername(), 
 												 userDetails.getEmail(), 
 												 roles));
+		}
+		else {
+		return ResponseEntity
+				.badRequest()
+				.body(new MessageResponse("Error: Account not verified"));
+		}
 	}
 
 	@PostMapping("/signup")
-	public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+	public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest, HttpServletRequest request) throws UnsupportedEncodingException, MessagingException {
 		if (userRepository.existsByUsername(signUpRequest.getUsername())) {
 			return ResponseEntity
 					.badRequest()
@@ -85,11 +109,26 @@ public class AuthController {
 					.badRequest()
 					.body(new MessageResponse("Error: Email is already exist!"));
 		}
+		
+		User user=new User();
+		
+	    String randomCode = RandomString.make(64);
+		user.setVerificationCode(randomCode);
+		System.out.println(user.getVerificationCode());
+		user.setEnabled(false);
+		
+		user.setUsername(signUpRequest.getUsername());
+		user.setEmail(signUpRequest.getEmail());
+		user.setPassword(encoder.encode(signUpRequest.getPassword()));
 
 		// Create new user's account
-		User user = new User(signUpRequest.getUsername(), 
+		/*User user = new User(signUpRequest.getUsername(), 
 							 signUpRequest.getEmail(),
-							 encoder.encode(signUpRequest.getPassword()));
+							 encoder.encode(signUpRequest.getPassword()), 
+									 signUpRequest.getVerificationCode(),
+									 signUpRequest.isEnabled());*/
+		
+		
 
 		Set<String> strRoles = signUpRequest.getRole();
 		Set<Role> roles = new HashSet<>();
@@ -107,6 +146,12 @@ public class AuthController {
 					roles.add(adminRole);
 
 					break;
+				case "mod":
+					Role modRole = roleRepository.findByName(ERole.ROLE_MODERATOR)
+							.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+					roles.add(modRole);
+
+					break;
 				default:
 					Role userRole = roleRepository.findByName(ERole.ROLE_USER)
 							.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
@@ -117,7 +162,41 @@ public class AuthController {
 
 		user.setRoles(roles);
 		userRepository.save(user);
-
-		return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+		
+		//String siteURL = request.getRequestURL().toString();
+		String siteURL="http://localhost:3000";
+		sendVerificationEmail(user, siteURL);
+		
+		
+		return ResponseEntity.ok(new MessageResponse("User registered successfully! Please verify the mail that has sent to you!!"));
 	}
+	
+	private void sendVerificationEmail(User user, String siteURL) throws MessagingException, UnsupportedEncodingException {
+	    String toAddress = user.getEmail();
+	    String fromAddress = "rapplicationdevelopment@gmail.com";
+	    String senderName = "App Develop";
+	    String subject = "Please verify your registration";
+	    String content = "Dear [[name]],<br>"
+	            + "Please click the link below to verify your registration:<br>"
+	            + "<h3><a href=\"[[URL]]\" target=\"_self\">VERIFY</a></h3>"
+	            + "Thank you,<br>"
+	            + "App Dev Team";
+	     
+	    MimeMessage message = mailSender.createMimeMessage();
+	    MimeMessageHelper helper = new MimeMessageHelper(message);
+	     
+	    helper.setFrom(fromAddress, senderName);
+	    helper.setTo(toAddress);
+	    helper.setSubject(subject);
+	     
+	    content = content.replace("[[name]]", user.getUsername());
+	    String verifyURL = siteURL + "/verify?code=" + user.getVerificationCode();
+	     
+	    content = content.replace("[[URL]]", verifyURL);
+	     
+	    helper.setText(content, true);
+	     
+	    mailSender.send(message);
+	     
+    }
 }
