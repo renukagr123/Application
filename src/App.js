@@ -10,6 +10,7 @@ import Register from "./components/register.component";
 import Home from "./components/home.component";
 import Profile from "./components/profile.component";
 import BoardUser from "./components/board-user.component";
+import Verify from "./components/verify.component";
 
 // import AuthVerify from "./common/auth-verify";
 //import EventBus from "./common/EventBus";
@@ -113,6 +114,7 @@ class App extends Component {
             <Route exact path="/register" component={Register} />
             <Route exact path="/profile" component={Profile} />
             <Route path="/user" component={BoardUser} />
+            <Route path="/verify" component={Verify} />
         </Switch>     
         </div>
 

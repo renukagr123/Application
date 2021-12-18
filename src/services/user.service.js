@@ -8,6 +8,10 @@ class UserService {
     return axios.get(API_URL + 'all');
   }
 
+  getVerify(vcode) {
+    return axios.get(API_URL + 'verify/' +`${vcode}`);
+  }
+
   getUserBoard() {
     return axios.get(API_URL + 'user', { headers: authHeader() });
   }
