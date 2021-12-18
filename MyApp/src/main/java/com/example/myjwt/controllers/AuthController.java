@@ -119,16 +119,7 @@ public class AuthController {
 		
 		user.setUsername(signUpRequest.getUsername());
 		user.setEmail(signUpRequest.getEmail());
-		user.setPassword(encoder.encode(signUpRequest.getPassword()));
-
-		// Create new user's account
-		/*User user = new User(signUpRequest.getUsername(), 
-							 signUpRequest.getEmail(),
-							 encoder.encode(signUpRequest.getPassword()), 
-									 signUpRequest.getVerificationCode(),
-									 signUpRequest.isEnabled());*/
-		
-		
+		user.setPassword(encoder.encode(signUpRequest.getPassword()));	
 
 		Set<String> strRoles = signUpRequest.getRole();
 		Set<Role> roles = new HashSet<>();
@@ -167,7 +158,7 @@ public class AuthController {
 	
 	private void sendVerificationEmail(User user, String siteURL) throws MessagingException, UnsupportedEncodingException {
 	    String toAddress = user.getEmail();
-	    String fromAddress = "rapplicationdevelopment@gmail.com";
+	    String fromAddress = your mail id
 	    String senderName = "App Develop";
 	    String subject = "Please verify your registration";
 	    String content = "Dear [[name]],<br>"
